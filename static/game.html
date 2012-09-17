@@ -1,0 +1,186 @@
+<html>
+    <head>
+        <style type="text/css">
+            
+            #visitor-container, #player-container {
+                padding: 10px 0;
+            }
+
+            .person {
+                margin: 2px;
+                border-radius: 5px;
+                -moz-border-radius: 5px;
+                -webkit-border-radius: 5px;
+            }
+            
+            #visitor-container .person {
+                padding: 0 5px 2px 5px;
+                background-color: #DED;
+            }
+            
+            #player-container .person {
+                padding: 4px 8px 6px 8px;
+                background-color: #DDE;
+            }
+             
+            #player-container .person.bad {
+                background-color: #EDD;
+            }
+                        
+            #player-container {
+                display: none;
+                padding: 10px 0;
+            }
+            
+            #game-state {
+                display: none;
+            }
+            
+            #game-state * {
+                float: left;
+            }
+            
+            #game-state .round {
+                border-radius: 20px;
+                -moz-border-radius: 20px;
+                -webkit-border-radius: 20px;
+                width: 20px;
+                height: 20px;
+                border: solid gray 1px;
+                margin-left: 8px;
+            }
+            
+            
+            #game-state .round.failed {
+                background-color: red;
+            }
+            
+            #game-state .round.passed {
+                background-color: blue;
+            }
+
+            
+        </style>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/static/jquery.min.js"></script>
+        <script src="/static/underscore-min.js"></script>
+        <script>
+
+            function getCookie(key) {
+                var cookies = document.cookie.split(";");
+                for (var i = 0; i < cookies.length; i++) {
+                    var parts = cookies[i].trim().split("=");
+                    if (parts[0]===key) {
+                        return parts[1];
+                    }
+                }
+            }
+            
+            var gameid = /game\/(\w+)/.exec(window.location.pathname).slice(-1)[0];
+            
+            var socket = io.connect("/");
+            
+            var started = false;
+
+            function emit(channel, data) {
+                if (!data) {
+                    data = {};
+                }
+                data.gameid = gameid;
+                socket.emit(channel, data);
+            }
+
+            emit("session", {sessionid: getCookie("sessionid") || Math.random().toString().slice(2)});
+
+            socket.on("connect", function() {
+                emit("joingame");
+            });
+            
+            socket.on("msg", function(data) {
+                $("#messages").prepend("<div>" + data + "</div>");
+            });
+            
+            socket.on("name", function(data) {
+                $("#visitors #" + data.session).text(data.name);
+            });
+                                    
+            socket.on("gamestarted", function(data) {
+                var players = $("#players").html();
+                _.each(data.players, function(player) {
+                    players.append("<span class='person' id='" + data.session + "'>" + player.name + "</span>")
+                });
+                players.show();
+                started = true;
+                $("#setname").hide();
+            });
+            
+            socket.on("hangout", function(data) {
+                if (data.url) {
+                    $("#hangout-link")
+                        .attr("href", data.url)
+                        .text("Join Hangout");
+                }
+            });
+            
+            socket.on("visitorjoined", function(data) {
+                var visitor = $("#visitors #" + data.session);
+                if (!visitor.length) {
+                    visitor = $("<span class='person' id='" + data.session + "'></span>").appendTo("#visitors");
+                }
+                visitor.text(data.name);
+                toggleVisibility();
+            });
+
+            socket.on("visitorleft", function(data) {
+                $("#visitors #" + data.session).remove();
+                toggleVisibility();
+            });
+            
+            function toggleVisibility() {
+                var count = $("#visitors .person").length;
+                $("#start-game").toggle(count >=5 && count <= 10 && !started);
+            }
+            
+            $(function() {
+                
+                toggleVisibility();
+                
+                $("#chatbox").keydown(function(ev) {
+                    if (ev.which==13 && $(this).val()) {
+                        emit("msg", {message: $(this).val()});
+                        $(this).val("");
+                    }
+                }).focus(); // focus the chatbox so user can type
+
+                $("#setname").keydown(function(ev) {
+                    if (ev.which==13 && $(this).val()) {
+                        emit("changename", {name: $(this).val()});
+                        $(this).val("");
+                    }
+                });
+                
+            });
+
+        </script>
+    </head>
+
+    <body>
+        <input type="text" id="chatbox" size="100" placeholder="Chat! (or paste Hangout URL)"/>
+        <input type="text" id="setname" size="30" placeholder="Set your name"/>
+        <a id="hangout-link" href="https://plus.google.com/hangouts/_" style="text-decoration:none;" target="_blank">
+            Start a Hangout
+        </a>
+        <div id="visitor-container"><b>Visitors: </b><span id="visitors"></span><button id="start-game">Let the games begin!</button></div>
+        <div id="player-container"><b>Players: </b><span id="players"></span></div>
+        <div id="game-state"><b>Game state: </b>
+            <span class="round" id="round1"></span>
+            <span class="round" id="round2"></span>
+            <span class="round" id="round3"></span>
+            <span class="round" id="round4"></span>
+            <span class="round" id="round5"></span>
+        </div>
+        <div id="messages"></div>
+    </body>
+
+</html>
