@@ -5,10 +5,11 @@ Will the programmers make their project successful in the face of secret saboteu
 __Dependencies__
 
 * [mongodb](http://www.mongodb.org/)
-* [node.js](http://nodejs.org/), and then:
+* [node.js](http://nodejs.org/), and then (from inside the code directory):
+
+
 
     npm install express mongoskin socket.io underscore
-
     npm install -g coffeescript
 
 __Running__
@@ -17,6 +18,6 @@ Make sure that the mongo daemon is running, e.g.:
 
     sudo mongod
 
-And then, from the code folder, run:
+And then, from the code directory, run:
 
     coffee server.coffee
