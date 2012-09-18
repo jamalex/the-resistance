@@ -9,6 +9,7 @@ __Dependencies__
 
 
     npm install express mongoskin socket.io underscore
+
     npm install -g coffeescript
 
 __Running__
