@@ -7,7 +7,6 @@ __Dependencies__
 * [mongodb](http://www.mongodb.org/)
 * [node.js](http://nodejs.org/), and then:
 
-
     npm install express mongoskin socket.io underscore
 
     npm install -g coffeescript
