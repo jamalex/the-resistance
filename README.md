@@ -8,8 +8,8 @@ __Dependencies__
 * [node.js](http://nodejs.org/), and then (from inside the code directory):
 
 
-	npm install express mongoskin socket.io underscore
-	npm install -g coffeescript
+		npm install express mongoskin socket.io underscore
+		npm install -g coffeescript
 
 __Running__
 
