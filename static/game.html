@@ -110,7 +110,9 @@
             
             var gameid = /game\/(\w+)/.exec(window.location.pathname).slice(-1)[0];
             
-            var socket = io.connect("/");
+            var socket = io.connect("/", {
+                "max reconnection attempts": 5000
+            });
             
             var started = false;
 
@@ -191,7 +193,8 @@
             });
             
             socket.on("voting", function(data) {
-                $("#vote-text").html(data.proposal);
+                $("#vote-text").html("<b>" + data.proposal + "</b>");
+                showMessage("<div style='color: blue;'>" + data.proposal + "</div>");
                 $("#voting").show();
             });
 
@@ -330,6 +333,7 @@
             <br/>
             <div id="propose-text"></div><br/>
             <div id="propose-options"></div>
+            <br/>
         </div>
         <div id="voting">
             <span id="vote-text"></span>

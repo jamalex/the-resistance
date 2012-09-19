@@ -85,6 +85,15 @@ newLeader = (obj) ->
 sendMessage = (data, message) ->
     io.sockets.in(data.gameid).emit "msg", message
 
+addToLog = (data, eventtype, params, save=false) ->
+    if save
+        loadGameData data, (err, obj) ->
+            obj.log.push eventtype: eventtype, params: params
+            saveGameData obj
+    else
+        console.log "data", data
+        data.log.push eventtype: eventtype, params: params
+
 # handle the creation of a new socket (i.e. a new browser connecting)
 io.sockets.on "connection", (socket) ->
     
@@ -135,6 +144,7 @@ io.sockets.on "connection", (socket) ->
             io.sockets.in(data.gameid).emit "hangout", url: data.message
         else
             message = "<b>" + socket.name + ":</b> " + data.message
+            addToLog data, "message", name: socket.name, session: socket.session, msg: data.message, true
             sendMessage data, message
 
     socket.on "session", (data) ->
@@ -194,13 +204,15 @@ io.sockets.on "connection", (socket) ->
                 projectvotes: {}
                 projectvotecount: 0
                 sabotagecount: 0
-                text: "<b>" + socket.name + " proposes the team: " + (player.name for player in data.players).toString().replace(/,/g, ", ") + "</b>"
+                text: socket.name + " proposes the team: " + (player.name for player in data.players).toString().replace(/,/g, ", ")
             obj.stage = "voting"
+            addToLog obj, "proposal", name: socket.name, session: socket.session, players: data.players
             saveGameData obj
             io.sockets.in(data.gameid).emit "voting", proposal: obj.proposal.text
             
     socket.on "vote", (data) ->
         loadGameData data, (err, obj) ->
+            addToLog obj, "vote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has voted!</i>"
             obj.proposal.votes[socket.session] = {name: socket.name, vote: data.vote}
             obj.proposal.votecount += 1
@@ -214,14 +226,17 @@ io.sockets.on "connection", (socket) ->
                 if obj.proposal.votedup
                     obj.stage = "project"
                     io.sockets.in(data.gameid).emit "project", players: obj.proposal.players
+                    addToLog obj, "votepassed", votes: obj.proposal.votes
                 else
                     obj.stage = "proposing"
                     obj.leader = (obj.leader + 1) % obj.players.length
-                    newLeader obj                    
+                    addToLog obj, "votefailed", votes: obj.proposal.votes
+                    newLeader obj
             saveGameData obj
 
     socket.on "projectvote", (data) ->
         loadGameData data, (err, obj) ->
+            addToLog obj, "projectvote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has participated in the project!</i>"
             obj.proposal.projectvotes[socket.session] = {name: socket.name, vote: data.vote}
             obj.proposal.projectvotecount += 1
@@ -229,15 +244,17 @@ io.sockets.on "connection", (socket) ->
                 obj.proposal.sabotagecount += 1
             if obj.proposal.projectvotecount == obj.proposal.players.length
                 if obj.rounds.length == 3 and obj.players.length in rules.twotofailrounds
-                    failsneeded = 2
+                    obj.proposal.failsneeded = 2
                 else
-                    failsneeded = 1
-                if obj.proposal.sabotagecount >= failsneeded
+                    obj.proposal.failsneeded = 1
+                if obj.proposal.sabotagecount >= obj.proposal.failsneeded
                     obj.proposal.sabotaged = true
                     obj.totalfailures += 1
+                    addToLog obj, "projectfailed", sabotagecount: obj.proposal.sabotagecount
                 else
                     obj.proposal.sabotaged = false
                     obj.totalsuccesses += 1
+                    addToLog obj, "projectpassed", sabotagecount: obj.proposal.sabotagecount
                 obj.rounds.push obj.proposal
                 io.sockets.in(data.gameid).emit "projectcomplete",
                     sabotagecount: obj.proposal.sabotagecount
@@ -253,6 +270,7 @@ io.sockets.on "connection", (socket) ->
                     obj.stage = "proposing"
                     obj.leader = (obj.leader + 1) % obj.players.length
                     newLeader obj
+                delete obj.proposal
             saveGameData obj
                 
     socket.on "startgame", (data) ->
