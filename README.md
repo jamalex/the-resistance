@@ -21,3 +21,7 @@ And then, from the code directory, run:
 	coffee server.coffee
 	
 Then go to: http://127.0.0.1:2020/
+
+__Demo server__
+
+Try it live at: http://eslgenie.com:2020/
