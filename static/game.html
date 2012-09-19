@@ -133,7 +133,7 @@
             });
 
             socket.on("connect", function() {
-                emit("session", {sessionid: getCookie("sessionid") || Math.random().toString().slice(2)});
+                emit("session", {sessionid: getCookie("session") || Math.random().toString().slice(2)});
                 emit("joingame");
             });
 
@@ -182,17 +182,11 @@
                 }
             });
             
-            socket.on("visitorjoined", function(data) {
-                var visitor = $("#visitors #" + data.session);
-                if (!visitor.length) {
-                    visitor = $("<span class='person' id='visitor-" + data.session + "'></span>").appendTo("#visitors");
-                }
-                visitor.text(data.name);
-                toggleVisibility();
-            });
-
-            socket.on("visitorleft", function(data) {
-                $("#visitors #visitor-" + data.session).remove();
+            socket.on("visitors", function(data) {
+                $("#visitors").html("");
+                _.each(data.visitors, function(n, s) {
+                    $("#visitors").append("<span class='person' id='visitor-" + s + "'>" + n + "</span>");
+                });
                 toggleVisibility();
             });
             
@@ -226,7 +220,7 @@
                     showMessage("<div style='color: red;'>Miserable nay-sayers: " + nonsupporters.toString().replace(/,/g, ", ") + "</div>");
                 }
                 if (data.votedup) {
-                    showMessage("<div style='color: blue;'>The vote passed! The project will go ahead.</div>");
+                    showMessage("<div style='color: blue;'>The vote passed! The project will now proceed. Ganbatte!</div>");
                 } else {
                     showMessage("<div style='color: red;'>The vote failed! Leadership is passed on.</div>");
                 }
@@ -343,7 +337,7 @@
             <button class="vote" data-vote="down">Do Not Support</button>
         </div>
         <div id="project-voting">
-            <span id="project-text">You're on the project! Do you cooperate, or sabotage it?</span><br/>
+            <span id="project-text"><b>You're on the project! Do you cooperate, or sabotage it?</b></span><br/>
             <button class="project-vote" data-vote="cooperate">Cooperate</button>
             <button class="project-vote" data-vote="sabotage">Sabotage</button>
         </div>

@@ -3,26 +3,38 @@ fs = require("fs")
 express = require("express")
 crypto = require("crypto")
 mongoskin = require("mongoskin")
+uuid = require("node-uuid")
 _ = require("underscore")
 db = mongoskin.db("localhost/david?auto_reconnect")
 
 games = db.collection("games")
 names = db.collection("names")
 
-app = express(
-    express.cookieParser(),
-    express.session(),
-)
+app = express()
+
+app.configure ->
+    app.use express.cookieParser('secret stuff!')
+    app.use express.session({ secret: 'asdfg', cookie: { maxAge: 60 * 60 * 10000 }})
 
 app.use "/static", express.static(__dirname + "/static")
 
 app.get "/", (request, response) ->
-  fs.readFile __dirname + "/static/index.html", (err, text) ->
-      response.end text
+    fs.readFile __dirname + "/static/index.html", (err, text) ->
+        response.end text
+
+ensureSessionCookie = (request, response) ->
+    cookies = {}
+    for cookie in request.headers.cookie?.split(";") or []
+        parts = cookie.split("=");
+        cookies[parts[0].trim()] = (parts[1] || "").trim()
+    if not cookies.session
+        response.writeHead 200,
+            'Set-Cookie': 'session=' + uuid().replace("-", "")
 
 app.get "/game/:gameid", (request, response) ->
-  fs.readFile __dirname + "/static/game.html", (err, text) ->
-      response.end text
+    ensureSessionCookie request, response
+    fs.readFile __dirname + "/static/game.html", (err, text) ->
+        response.end text
 
 server = http.createServer(app)
 io = require("socket.io").listen(server)
@@ -99,6 +111,17 @@ io.sockets.on "connection", (socket) ->
                 if s.session in obj.badplayers
                     data.badplayers = obj.badplayers
             s.emit "gamedata", data
+        sendVisitors obj
+
+    sendVisitors = (obj, sockets) ->
+        if obj not instanceof Object
+            return
+        if not sockets
+            sockets = io.sockets.clients(obj._id.toString())
+        if sockets not instanceof Array
+            sockets = [sockets]
+        for s in sockets
+            s.emit "visitors", visitors: obj.visitors
     
     proposeIfLeader = (obj) ->
         console.log obj.started, obj.stage, socket.session, obj.players?[obj.leader]?.session
@@ -131,11 +154,10 @@ io.sockets.on "connection", (socket) ->
         for room of socket.rooms
             if room and socket.rooms[room]
                 gameid = room[1..]
-                updateObj = {}
-                updateObj["visitors." + socket.session] = socket.name
-                console.log "updateObj", updateObj
-                games.update {_id: new db.ObjectID(gameid)}, updateObj
-                io.sockets.in(gameid).emit "name", session: socket.session, name: socket.name
+                loadGameData gameid: gameid, (err, obj) ->
+                    obj.visitors[socket.session] = socket.name
+                    saveGameData obj
+                    io.sockets.in(gameid).emit "name", session: socket.session, name: socket.name
 
     socket.on "creategame", ->
         games.save {}, (err, obj) ->
@@ -146,11 +168,9 @@ io.sockets.on "connection", (socket) ->
         loadGameData data, (err, obj) ->
             obj.visitors or= {}
             obj.visitors[socket.session] = socket.name
-            io.sockets.in(data.gameid).emit "visitorjoined", session: socket.session, name: socket.name
+            sendVisitors obj
             socket.join(data.gameid)
             # send all the cached game data to the client, to initialize it
-            for s, n of obj.visitors
-                socket.emit "visitorjoined", session: s, name: n
             if obj.hangoutUrl
                 socket.emit "hangout", url: obj.hangoutUrl
             sendGameData obj, socket
@@ -237,14 +257,14 @@ io.sockets.on "connection", (socket) ->
                 
     socket.on "startgame", (data) ->
         loadGameData data, (err, obj) ->
-            # if obj.started
-            #     return
+            if obj.started
+                return
             obj.started = true
             obj.players = ({session: s, name: n} for s, n of obj.visitors)
             numBad = rules.badplayers[obj.players.length]
             obj.badplayers = (p.session for p in _.shuffle(obj.players)[0...numBad])
             obj.rulesversion = rules.version
-            obj.leader = 0 * Math.floor(Math.random() * obj.players.length)
+            obj.leader = Math.floor(Math.random() * obj.players.length)
             obj.totalfailures = 0
             obj.totalsuccesses = 0
             obj.timestarted = new Date()
@@ -258,13 +278,10 @@ io.sockets.on "connection", (socket) ->
     socket.on "disconnect", ->
         for room of socket.rooms
             if room and socket.rooms[room]
-                gameid = room[1..]
-                updateObj = {$unset: {}}
-                updateObj["$unset"]["visitors." + socket.session] = 1
-                console.log "updateObj", {_id: gameid}, updateObj
-                games.update {_id: new db.ObjectID(gameid)}, updateObj, (err, obj) ->
-                    console.log "err", err
-                io.sockets.in(gameid).emit "visitorleft", session: socket.session, name: socket.name
-            
-
+                loadGameData gameid: room[1..], (err, obj) ->
+                    console.log err, obj, socket.session
+                    delete obj.visitors[socket.session]
+                    saveGameData obj
+                    sendVisitors obj
+                    
 server.listen 2020
