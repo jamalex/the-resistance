@@ -39,7 +39,7 @@ app.get "/game/:gameid", (request, response) ->
 server = http.createServer(app)
 io = require("socket.io").listen(server)
 
-io.set "log level", 3 # 3 for debug
+io.set "log level", 1 # 3 for debug
 
 hash = (msg) -> crypto.createHash('md5').update(msg || "").digest("hex")
 
@@ -91,8 +91,8 @@ addToLog = (data, eventtype, params, save=false) ->
             obj.log.push eventtype: eventtype, params: params
             saveGameData obj
     else
-        console.log "data", data
         data.log.push eventtype: eventtype, params: params
+    console.log "(#{data.gameid}) Event '#{eventtype}' by '#{params?.name}'"
 
 # handle the creation of a new socket (i.e. a new browser connecting)
 io.sockets.on "connection", (socket) ->
@@ -133,7 +133,6 @@ io.sockets.on "connection", (socket) ->
             s.emit "visitors", visitors: obj.visitors
     
     proposeIfLeader = (obj) ->
-        console.log obj.started, obj.stage, socket.session, obj.players?[obj.leader]?.session
         if obj.started and socket.session is obj.players[obj.leader].session and obj.stage is "proposing"
             socket.emit "proposing", count: rules.rounds[obj.players.length][obj.rounds.length]
     
@@ -170,7 +169,15 @@ io.sockets.on "connection", (socket) ->
                     io.sockets.in(gameid).emit "name", session: socket.session, name: socket.name
 
     socket.on "creategame", ->
-        games.save {}, (err, obj) ->
+        gamedata =
+            log: []
+            stage: "unstarted"
+        games.save gamedata, (err, obj) ->
+            if err
+                console.error err
+                return
+            if not obj
+                console.warn "Game creation did not return an object; MongoDB issue?"
             socket.emit "showgame", obj._id
 
     socket.on "joingame", (data) ->
@@ -288,7 +295,6 @@ io.sockets.on "connection", (socket) ->
             obj.timestarted = new Date()
             obj.stage = "proposing"
             obj.rounds = []
-            obj.log = []
             sendGameData obj
             saveGameData obj
             newLeader obj
@@ -297,7 +303,6 @@ io.sockets.on "connection", (socket) ->
         for room of socket.rooms
             if room and socket.rooms[room]
                 loadGameData gameid: room[1..], (err, obj) ->
-                    console.log err, obj, socket.session
                     delete obj.visitors[socket.session]
                     saveGameData obj
                     sendVisitors obj
