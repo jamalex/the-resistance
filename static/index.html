@@ -11,15 +11,15 @@
             // initiate a WebSocket connection to the server using Socket.io
             var socket = io.connect("/");
             
-            socket.on("showgame", function(gamecode) {
-                window.location = "/game/" + gamecode;
+            socket.on("showgame", function(data) {
+                window.location = "/game/" + data.gameid;
             });
                         
             $(function() {
                 
                 $("#newgame").click(function(ev) {
                     socket.emit("creategame");
-                })
+                });
 
             });
 

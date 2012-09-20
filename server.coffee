@@ -85,15 +85,19 @@ newLeader = (obj) ->
 sendMessage = (data, message) ->
     io.sockets.in(data.gameid).emit "msg", message
 
-addToLog = (data, eventtype, params, save=false) ->
+addToLog = (data, eventtype, params={}, save=false) ->
+    newdata = 
+        eventtype: eventtype
+        params: params
+        timestamp: new Date()
     if save
         loadGameData data, (err, obj) ->
-            obj.log.push eventtype: eventtype, params: params
+            obj.log.push newdata
             saveGameData obj
     else
-        data.log.push eventtype: eventtype, params: params
+        data.log.push newdata
     console.log "(#{data.gameid or data._id}) Event '#{eventtype}'" +
-        (if params?.name then " by '#{params.name}'" else "")
+        (if params.name then " by '#{params.name}'" else "")
 
 # handle the creation of a new socket (i.e. a new browser connecting)
 io.sockets.on "connection", (socket) ->
@@ -171,17 +175,21 @@ io.sockets.on "connection", (socket) ->
                     saveGameData obj
                     io.sockets.in(gameid).emit "name", session: socket.session, name: socket.name
 
-    socket.on "creategame", ->
+    socket.on "creategame", (data={}) ->
         gamedata =
             log: []
             stage: "unstarted"
+            hangoutUrl: data.hangoutUrl or ""
         games.save gamedata, (err, obj) ->
             if err
                 console.error err
                 return
             if not obj
                 console.warn "Game creation did not return an object; MongoDB issue?"
-            socket.emit "showgame", obj._id
+            if data.gameid
+                io.sockets.in(data.gameid).emit "showgame", gameid: obj._id
+            else
+                socket.emit "showgame", gameid: obj._id
 
     socket.on "joingame", (data) ->
         if not socket.session then return
@@ -273,9 +281,11 @@ io.sockets.on "connection", (socket) ->
                 if obj.totalfailures == 3
                     obj.stage = "badwin"
                     sendMessage obj, "<div style='color: red;'>The bad guys won... :(</div>"
+                    io.sockets.in(data.gameid).emit "gameover"
                 else if obj.totalsuccesses == 3
                     obj.stage = "goodwin"
                     sendMessage obj, "<div style='color: blue;'>The good guys won!</div>"
+                    io.sockets.in(data.gameid).emit "gameover"
                 else
                     obj.stage = "proposing"
                     obj.leader = (obj.leader + 1) % obj.players.length

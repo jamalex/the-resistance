@@ -58,7 +58,7 @@
                 /*font-weight: bold;*/
             }
             
-            #start-game, #game-state, #voting, #proposing, #project-voting {
+            #start-game, #game-state, #voting, #proposing, #project-voting, #newgame, #newgamelink {
                 display: none;
             }
             
@@ -115,6 +115,7 @@
             });
             
             var started = false;
+            var hangoutUrl = "";
 
             function emit(channel, data) {
                 if (!data) {
@@ -132,6 +133,11 @@
             
             socket.on("session", function(data) {
                 session = data.session;
+            });
+
+            socket.on("showgame", function(data) {
+                $("#newgamelink").show().find("a").attr("href", "/game/" + data.gameid);
+                $("#newgame").hide();
             });
 
             socket.on("connect", function() {
@@ -180,6 +186,7 @@
             
             socket.on("hangout", function(data) {
                 if (data.url) {
+                    hangoutUrl = data.url;
                     $("#hangout-link")
                         .attr("href", data.url)
                         .text("Join Hangout");
@@ -270,6 +277,10 @@
                 showLeader(data.session);
             });
             
+            socket.on("gameover", function(data) {
+                $("#newgame").show();
+            });
+            
             function showLeader(leaderSession) {
                 $("#players .person").removeClass("leader");
                 $("#players #player-" + leaderSession).addClass("leader");
@@ -310,6 +321,10 @@
                     $("#project-voting").hide();
                 });
                 
+                $("#newgame").click(function(ev) {
+                    emit("creategame", {hangoutUrl: hangoutUrl});
+                });
+                
             });
 
         </script>
@@ -322,7 +337,7 @@
             Start a Hangout
         </a>
         <div id="visitor-container"><b>Present: </b><span id="visitors"></span><button id="start-game">Let the games begin!</button></div>
-        <div id="player-container"><b>Players: </b><span id="players"></span> (<span id="badplayercount"></span> of <span id="playercount"></span> are bad)</div>
+        <div id="player-container"><b>Players: </b><span id="players"></span> (<span id="badplayercount"></span> of <span id="playercount"></span> are <span class="color: #EDD">bad</span>)</div>
         <div id="game-state"><b>Game state: </b>
             <span class="round" id="round0"></span>
             <span class="round" id="round1"></span>
@@ -347,6 +362,8 @@
             <button class="project-vote" data-vote="cooperate">Cooperate</button>
             <button class="project-vote" data-vote="sabotage">Sabotage</button>
         </div>
+        <button id="newgame">New game</button>
+        <h2 id="newgamelink"><a>New game created! Click to join!</a></h2>
         <div id="messages"></div>
     </body>
 
