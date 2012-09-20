@@ -92,7 +92,8 @@ addToLog = (data, eventtype, params, save=false) ->
             saveGameData obj
     else
         data.log.push eventtype: eventtype, params: params
-    console.log "(#{data.gameid}) Event '#{eventtype}' by '#{params?.name}'"
+    console.log "(#{data.gameid or data._id}) Event '#{eventtype}'" +
+        (if params?.name then " by '#{params.name}'" else "")
 
 # handle the creation of a new socket (i.e. a new browser connecting)
 io.sockets.on "connection", (socket) ->
@@ -117,6 +118,8 @@ io.sockets.on "connection", (socket) ->
                     rounds: obj.rounds
                     leader: obj.players[obj.leader]
                     counts: rules.rounds[obj.players.length]
+                    badplayercount: obj.badplayers.length
+                    playercount: obj.players.length
                 if s.session in obj.badplayers
                     data.badplayers = obj.badplayers
             s.emit "gamedata", data

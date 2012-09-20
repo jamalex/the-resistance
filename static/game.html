@@ -156,7 +156,7 @@
                 started = data.started;
                 var players = $("#players").html("");
                 _.each(data.players, function(player) {
-                    players.append("<span class='person' id='player-" + player.session + "' data-session='" + player.session + "'>" + player.name + "</span>")
+                    players.append("<span class='person' id='player-" + player.session + "' data-session='" + player.session + "'>" + player.name + "</span>");
                 });
                 _.each(data.badplayers || [], function(badsession) {
                     $("#player-" + badsession).addClass("bad");
@@ -173,7 +173,9 @@
                     _.each(data.rounds, function(round, ind) {
                         $("#round" + ind).addClass(round.sabotaged ? "failed" : "passed");
                     });
-                }    
+                    $("#badplayercount").text(data.badplayercount);
+                    $("#playercount").text(data.playercount);
+                }
             });
             
             socket.on("hangout", function(data) {
@@ -320,7 +322,7 @@
             Start a Hangout
         </a>
         <div id="visitor-container"><b>Present: </b><span id="visitors"></span><button id="start-game">Let the games begin!</button></div>
-        <div id="player-container"><b>Players: </b><span id="players"></span></div>
+        <div id="player-container"><b>Players: </b><span id="players"></span> (<span id="badplayercount"></span> of <span id="playercount"></span> are bad)</div>
         <div id="game-state"><b>Game state: </b>
             <span class="round" id="round0"></span>
             <span class="round" id="round1"></span>
