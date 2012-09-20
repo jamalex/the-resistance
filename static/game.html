@@ -279,6 +279,7 @@
             
             socket.on("gameover", function(data) {
                 $("#newgame").show();
+                showMessage("The bad players were: " + data.badplayers.toString().replace(/,/g, ", "));
             });
             
             function showLeader(leaderSession) {

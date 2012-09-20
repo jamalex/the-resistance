@@ -281,11 +281,11 @@ io.sockets.on "connection", (socket) ->
                 if obj.totalfailures == 3
                     obj.stage = "badwin"
                     sendMessage obj, "<div style='color: red;'>The bad guys won... :(</div>"
-                    io.sockets.in(data.gameid).emit "gameover"
+                    io.sockets.in(data.gameid).emit "gameover", badplayers: obj.badplayers
                 else if obj.totalsuccesses == 3
                     obj.stage = "goodwin"
                     sendMessage obj, "<div style='color: blue;'>The good guys won!</div>"
-                    io.sockets.in(data.gameid).emit "gameover"
+                    io.sockets.in(data.gameid).emit "gameover", badplayers: obj.badplayers
                 else
                     obj.stage = "proposing"
                     obj.leader = (obj.leader + 1) % obj.players.length
