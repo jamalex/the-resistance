@@ -149,9 +149,9 @@ io.sockets.on "connection", (socket) ->
         if obj.started and socket.session is obj.players[obj.leader].session and obj.stage is "proposing"
             socket.emit "proposing", count: rules.rounds[obj.players.length][obj.rounds.length]
     
-    sessionInList = (playerList) ->
+    listContainsSession = (playerList, session=socket.session) ->
         for player in playerList
-            if player is socket.session or player.session is socket.session
+            if player is session or player.session is session
                 return true
         return false
     
@@ -251,7 +251,7 @@ io.sockets.on "connection", (socket) ->
             if obj.stage isnt "voting"
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent proposal.", true
                 return
-            if not sessionInList(obj.players)
+            if not listContainsSession(obj.players)
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a proposal, but isn't in the game.", true
                 return
             addToLog obj, "vote", name: socket.name, session: socket.session, vote: data.vote
@@ -281,7 +281,7 @@ io.sockets.on "connection", (socket) ->
             if obj.stage isnt "project"
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent project.", true
                 return
-            if not sessionInList(obj.proposal.players)
+            if not listContainsSession(obj.proposal.players)
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a project s/he's not on.", true
                 return
             addToLog obj, "projectvote", name: socket.name, session: socket.session, vote: data.vote
@@ -342,6 +342,11 @@ io.sockets.on "connection", (socket) ->
             sendGameData obj
             addToLog obj, "gamestart"
             saveGameData obj
+            for s in io.sockets.clients(data.gameid)
+                if listContainsSession(obj.badplayers, s.session)
+                    s.emit "msg", "<div style='color: red;'>You are a bad person. All the bad people are marked in red for you above.</div>"
+                else if listContainsSession(obj.players, s.session)
+                    s.emit "msg", "<div style='color: blue;'>You are a good person. You don't know who the bad people are.</div>"
             newLeader obj
     
     socket.on "disconnect", ->
