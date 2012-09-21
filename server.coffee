@@ -344,9 +344,9 @@ io.sockets.on "connection", (socket) ->
             saveGameData obj
             for s in io.sockets.clients(data.gameid)
                 if listContainsSession(obj.badplayers, s.session)
-                    s.emit "msg", "<div style='color: red;'>You are a bad person. All the bad people are marked in red for you above.</div>"
+                    s.emit "msg", "You are a bad person. All the bad people are marked in red above."
                 else if listContainsSession(obj.players, s.session)
-                    s.emit "msg", "<div style='color: blue;'>You are a good person. You don't know who the bad people are.</div>"
+                    s.emit "msg", "You are a good person. You don't know who the bad people are."
             newLeader obj
     
     socket.on "disconnect", ->
