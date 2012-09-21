@@ -63,7 +63,7 @@ rules =
         [7, 8, 9, 10]
 
 loadGameData = (data, callback) ->
-    games.findOne _id: new db.ObjectID(data.gameid), (err, obj) ->
+    games.findOne _id: new db.ObjectID(data.gameid.toString()), (err, obj) ->
         if err
             console.error "Error loading game:", err
             return
@@ -86,18 +86,24 @@ sendMessage = (data, message) ->
     io.sockets.in(data.gameid).emit "msg", message
 
 addToLog = (data, eventtype, params={}, save=false) ->
+    gameid = data.gameid or data._id.toString()
+    if not gameid
+        console.error "Cannot add to log (no gameid): " + data
+        return
     newdata = 
         eventtype: eventtype
         params: params
         timestamp: new Date()
     if save
-        loadGameData data, (err, obj) ->
+        loadGameData gameid: gameid, (err, obj) ->
             obj.log.push newdata
             saveGameData obj
     else
         data.log.push newdata
-    console.log "(#{data.gameid or data._id}) Event '#{eventtype}'" +
+    console.log "(#{gameid}) Event '#{eventtype}'" +
         (if params.name then " by '#{params.name}'" else "")
+    if eventtype is "illegalmove"
+        sendMessage {gameid: gameid}, "<i style='color: red;'>#{params.description}</i>"
 
 # handle the creation of a new socket (i.e. a new browser connecting)
 io.sockets.on "connection", (socket) ->
@@ -143,10 +149,16 @@ io.sockets.on "connection", (socket) ->
         if obj.started and socket.session is obj.players[obj.leader].session and obj.stage is "proposing"
             socket.emit "proposing", count: rules.rounds[obj.players.length][obj.rounds.length]
     
+    sessionInList = (playerList) ->
+        for player in playerList
+            if player is socket.session or player.session is socket.session
+                return true
+        return false
+    
     # handle incoming "msg" events, and emit them back out to all connected clients
     socket.on "msg", (data) ->
         if data.message[0...35] is "https://plus.google.com/hangouts/_/"
-            games.save _id: new db.ObjectID(data.gameid), hangoutUrl: data.message
+            games.save _id: new db.ObjectID(data.gameid.toString()), hangoutUrl: data.message
             io.sockets.in(data.gameid).emit "hangout", url: data.message
         else
             message = "<b>" + socket.name + ":</b> " + data.message
@@ -211,6 +223,12 @@ io.sockets.on "connection", (socket) ->
             
     socket.on "propose", (data) ->
         loadGameData data, (err, obj) ->
+            if obj.stage isnt "proposing"
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team prematurely.", true
+                return
+            if socket.session isnt obj.players[obj.leader].session
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team, but isn't in the game.", true
+                return
             obj.proposal =
                 players: data.players
                 leader:
@@ -230,6 +248,12 @@ io.sockets.on "connection", (socket) ->
             
     socket.on "vote", (data) ->
         loadGameData data, (err, obj) ->
+            if obj.stage isnt "voting"
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent proposal.", true
+                return
+            if not sessionInList(obj.players)
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a proposal, but isn't in the game.", true
+                return
             addToLog obj, "vote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has voted!</i>"
             obj.proposal.votes[socket.session] = {name: socket.name, vote: data.vote}
@@ -254,6 +278,12 @@ io.sockets.on "connection", (socket) ->
 
     socket.on "projectvote", (data) ->
         loadGameData data, (err, obj) ->
+            if obj.stage isnt "project"
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent project.", true
+                return
+            if not sessionInList(obj.proposal.players)
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a project s/he's not on.", true
+                return
             addToLog obj, "projectvote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has participated in the project!</i>"
             obj.proposal.projectvotes[socket.session] = {name: socket.name, vote: data.vote}
@@ -295,7 +325,8 @@ io.sockets.on "connection", (socket) ->
                 
     socket.on "startgame", (data) ->
         loadGameData data, (err, obj) ->
-            if obj.started
+            if obj.stage isnt "unstarted"
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to start the game, but it's already started.", true
                 return
             obj.started = true
             obj.players = ({session: s, name: n} for s, n of obj.visitors)
@@ -309,6 +340,7 @@ io.sockets.on "connection", (socket) ->
             obj.stage = "proposing"
             obj.rounds = []
             sendGameData obj
+            addToLog obj, "gamestart"
             saveGameData obj
             newLeader obj
     
