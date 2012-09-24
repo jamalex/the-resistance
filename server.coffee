@@ -177,7 +177,7 @@ io.sockets.on "connection", (socket) ->
 
     socket.on "changename", (data) ->
         if not socket.session then return
-        socket.name = data.name
+        socket.name = _.escape data.name
         names.save _id: socket.session, name: socket.name
         for room of socket.rooms
             if room and socket.rooms[room]
