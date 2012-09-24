@@ -166,7 +166,7 @@
             });
             
             socket.on("name", function(data) {
-                $("#visitors #visitor-" + data.session).text(data.name);
+                $("#visitors #visitor-" + data.session).html(data.name);
             });
 
             socket.on("gamedata", function(data) {
