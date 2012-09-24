@@ -227,7 +227,7 @@ io.sockets.on "connection", (socket) ->
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team prematurely.", true
                 return
             if socket.session isnt obj.players[obj.leader].session
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team, but isn't in the game.", true
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team, but isn't the leader.", true
                 return
             obj.proposal =
                 players: data.players
@@ -254,6 +254,9 @@ io.sockets.on "connection", (socket) ->
             if not listContainsSession(obj.players)
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a proposal, but isn't in the game.", true
                 return
+            if obj.proposal.votes[socket.session]
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on the proposal AGAIN.", true
+                return                
             addToLog obj, "vote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has voted!</i>"
             obj.proposal.votes[socket.session] = {name: socket.name, vote: data.vote}
@@ -284,6 +287,9 @@ io.sockets.on "connection", (socket) ->
             if not listContainsSession(obj.proposal.players)
                 addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a project s/he's not on.", true
                 return
+            if obj.proposal.projectvotes[socket.session]
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on the project AGAIN.", true
+                return                
             addToLog obj, "projectvote", name: socket.name, session: socket.session, vote: data.vote
             sendMessage obj, "<i>" + socket.name + " has participated in the project!</i>"
             obj.proposal.projectvotes[socket.session] = {name: socket.name, vote: data.vote}
