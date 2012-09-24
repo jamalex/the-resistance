@@ -161,7 +161,7 @@ io.sockets.on "connection", (socket) ->
             games.save _id: new db.ObjectID(data.gameid.toString()), hangoutUrl: data.message
             io.sockets.in(data.gameid).emit "hangout", url: data.message
         else
-            message = "<b>" + socket.name + ":</b> " + data.message
+            message = "<b>" + socket.name + ":</b> " + _.escape data.message
             addToLog data, "message", name: socket.name, session: socket.session, msg: data.message, true
             sendMessage data, message
 
