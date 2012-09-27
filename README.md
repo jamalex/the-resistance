@@ -1,13 +1,13 @@
-"_I_ am a _good person_." -- David
+An unofficial online (real-time, websocket-based) version of [The Resistance](http://boardgamegeek.com/boardgame/41114/the-resistance), the awesome game of social deduction designed by [Don Eskridge](http://boardgamegeek.com/boardgamedesigner/11906/don-eskridge).
 
-Will the programmers make their project successful in the face of secret saboteurs? Play today to find out!
+Buy the original game, and support the developers! It's an awesome party game, and the art is great! This is just a way to play with people remotely, facilitated by a server to keep track of rounds/voting and Google+ Hangouts to facilitate yelling at each other until your voice is hoarse.
 
 __Dependencies__
 
 * [mongodb](http://www.mongodb.org/)
 * [node.js](http://nodejs.org/), and then (from inside the code directory):
 
-		npm install express mongoskin socket.io underscore
+		npm install express mongoskin socket.io underscore node-uuid
 		sudo npm install -g coffee-script
 
 __Running__
