@@ -218,16 +218,16 @@ io.sockets.on "connection", (socket) ->
             proposeIfLeader obj
             if obj.stage is "voting" and not obj.proposal.votes[socket.session]
                 socket.emit "voting", proposal: obj.proposal.text
-            if obj.stage is "project" and not obj.proposal.projectvotes[socket.session]
-                socket.emit "project", players: obj.proposal.players
+            if obj.stage is "mission" and not obj.proposal.missionvotes[socket.session]
+                socket.emit "mission", players: obj.proposal.players
             
     socket.on "propose", (data) ->
         loadGameData data, (err, obj) ->
             if obj.stage isnt "proposing"
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team prematurely.", true
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a mission team prematurely.", true
                 return
             if socket.session isnt obj.players[obj.leader].session
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a project team, but isn't the leader.", true
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to propose a mission team, but isn't the leader.", true
                 return
             obj.proposal =
                 players: data.players
@@ -237,8 +237,8 @@ io.sockets.on "connection", (socket) ->
                 votes: {}
                 votecount: 0
                 upcount: 0
-                projectvotes: {}
-                projectvotecount: 0
+                missionvotes: {}
+                missionvotecount: 0
                 sabotagecount: 0
                 text: socket.name + " proposes the team: " + (player.name for player in data.players).toString().replace(/,/g, ", ")
             obj.stage = "voting"
@@ -269,8 +269,8 @@ io.sockets.on "connection", (socket) ->
                     votes: obj.proposal.votes
                     votedup: obj.proposal.votedup
                 if obj.proposal.votedup
-                    obj.stage = "project"
-                    io.sockets.in(data.gameid).emit "project", players: obj.proposal.players
+                    obj.stage = "mission"
+                    io.sockets.in(data.gameid).emit "mission", players: obj.proposal.players
                     addToLog obj, "votepassed", votes: obj.proposal.votes
                 else
                     obj.stage = "proposing"
@@ -279,24 +279,24 @@ io.sockets.on "connection", (socket) ->
                     newLeader obj
             saveGameData obj
 
-    socket.on "projectvote", (data) ->
+    socket.on "missionvote", (data) ->
         loadGameData data, (err, obj) ->
-            if obj.stage isnt "project"
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent project.", true
+            if obj.stage isnt "mission"
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a non-existent mission.", true
                 return
             if not listContainsSession(obj.proposal.players)
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a project s/he's not on.", true
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on a mission s/he's not on.", true
                 return
-            if obj.proposal.projectvotes[socket.session]
-                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on the project AGAIN.", true
+            if obj.proposal.missionvotes[socket.session]
+                addToLog obj, "illegalmove", description: "Player '#{socket.name}' attempted to vote on the mission AGAIN.", true
                 return                
-            addToLog obj, "projectvote", name: socket.name, session: socket.session, vote: data.vote
-            sendMessage obj, "<i>" + socket.name + " has participated in the project!</i>"
-            obj.proposal.projectvotes[socket.session] = {name: socket.name, vote: data.vote}
-            obj.proposal.projectvotecount += 1
+            addToLog obj, "missionvote", name: socket.name, session: socket.session, vote: data.vote
+            sendMessage obj, "<i>" + socket.name + " has participated in the mission!</i>"
+            obj.proposal.missionvotes[socket.session] = {name: socket.name, vote: data.vote}
+            obj.proposal.missionvotecount += 1
             if data.vote is "sabotage"
                 obj.proposal.sabotagecount += 1
-            if obj.proposal.projectvotecount == obj.proposal.players.length
+            if obj.proposal.missionvotecount == obj.proposal.players.length
                 if obj.rounds.length == 3 and obj.players.length in rules.twotofailrounds
                     obj.proposal.failsneeded = 2
                 else
@@ -304,13 +304,13 @@ io.sockets.on "connection", (socket) ->
                 if obj.proposal.sabotagecount >= obj.proposal.failsneeded
                     obj.proposal.sabotaged = true
                     obj.totalfailures += 1
-                    addToLog obj, "projectfailed", sabotagecount: obj.proposal.sabotagecount
+                    addToLog obj, "missionfailed", sabotagecount: obj.proposal.sabotagecount
                 else
                     obj.proposal.sabotaged = false
                     obj.totalsuccesses += 1
-                    addToLog obj, "projectpassed", sabotagecount: obj.proposal.sabotagecount
+                    addToLog obj, "missionpassed", sabotagecount: obj.proposal.sabotagecount
                 obj.rounds.push obj.proposal
-                io.sockets.in(data.gameid).emit "projectcomplete",
+                io.sockets.in(data.gameid).emit "missioncomplete",
                     sabotagecount: obj.proposal.sabotagecount
                     sabotaged: obj.proposal.sabotaged
                     round: obj.rounds.length - 1

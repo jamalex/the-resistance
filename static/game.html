@@ -58,7 +58,7 @@
                 /*font-weight: bold;*/
             }
             
-            #start-game, #game-state, #voting, #proposing, #project-voting, #newgame, #newgamelink {
+            #start-game, #game-state, #voting, #proposing, #mission-voting, #newgame, #newgamelink {
                 display: none;
             }
             
@@ -218,10 +218,10 @@
                 $("#voting").show();
             });
 
-            socket.on("project", function(data) {
+            socket.on("mission", function(data) {
                 _.each(data.players, function(player) {
                     if (player.session===session) {
-                        $("#project-voting").show();
+                        $("#mission-voting").show();
                     }
                 });
             });
@@ -237,29 +237,29 @@
                     }
                 });
                 if (supporters.length) {
-                    showMessage("<div style='color: blue;'>Our proud project sponsors: " + supporters.toString().replace(/,/g, ", ") + "</div>");
+                    showMessage("<div style='color: blue;'>Our proud mission sponsors: " + supporters.toString().replace(/,/g, ", ") + "</div>");
                 }
                 if (nonsupporters.length) {
                     showMessage("<div style='color: red;'>Miserable nay-sayers: " + nonsupporters.toString().replace(/,/g, ", ") + "</div>");
                 }
                 if (data.votedup) {
-                    showMessage("<div style='color: blue;'>The vote passed! The project will now proceed. Ganbatte!</div>");
+                    showMessage("<div style='color: blue;'>The vote passed! The mission will now proceed. Ganbatte!</div>");
                 } else {
                     showMessage("<div style='color: red;'>The vote failed! Leadership is passed on.</div>");
                 }
             });
 
-            socket.on("projectcomplete", function(data) {
+            socket.on("missioncomplete", function(data) {
                 if (data.sabotaged) {
-                    showMessage("<div style='color: red;'>Oh noes! The project was a disaster. " + (data.sabotagecount===1 ? "One of the pieces failed." : "There were " + data.sabotagecount + " failures.") + "</div>");
+                    showMessage("<div style='color: red;'>Oh noes! The mission failed! " + (data.sabotagecount===1 ? "One person" : "There were " + data.sabotagecount + " people who") + " sabotaged it.</div>");
                 } else {
-                    showMessage("<div style='color: blue;'>Hooray! The project was a grand success, with " + (data.sabotagecount ? "only one unimportant piece failing..." : "no failures!") + "</div>");
+                    showMessage("<div style='color: blue;'>Hooray! The mission passed, " + (data.sabotagecount ? "though someone tried to sabotage it..." : "with no saboteurs!") + "</div>");
                 }
                 $("#round" + data.round).addClass(data.sabotaged ? "failed" : "passed");
             });
             
             function requestProposal(data) {
-                $("#propose-text").text("You're the leader! Please propose a team of " + data.count + " players, by clicking on them below:");
+                $("#propose-text").text("You're the leader! Please propose " + data.count + " players to go on a mission, by clicking on them below:");
                 $("#propose-options").html($("#players").html().replace("player-", "option-") + "<button id='submit-proposal'>Propose</button>");
                 $("#proposing").show();
                 $("#submit-proposal").hide();
@@ -283,7 +283,7 @@
                 if (data.session === session) {
                     requestProposal(data);
                 } else {
-                    showMessage(data.name + " is now the leader, and is choosing " + data.count + " players.");
+                    showMessage(data.name + " is now the leader, and is choosing " + data.count + " players for the next mission.");
                 }
                 showLeader(data.session);
             });
@@ -330,9 +330,9 @@
                     $("#voting").hide();
                 });
                 
-                $(".project-vote").click(function() {
-                    emit("projectvote", {vote: $(this).data("vote")});
-                    $("#project-voting").hide();
+                $(".mission-vote").click(function() {
+                    emit("missionvote", {vote: $(this).data("vote")});
+                    $("#mission-voting").hide();
                 });
                 
                 $("#newgame").click(function(ev) {
@@ -371,10 +371,10 @@
             <button class="vote" data-vote="up">Support</button>
             <button class="vote" data-vote="down">Do Not Support</button>
         </div>
-        <div id="project-voting">
-            <span id="project-text"><b>You're on the project! Do you cooperate, or sabotage it?</b></span><br/>
-            <button class="project-vote" data-vote="cooperate">Cooperate</button>
-            <button class="project-vote" data-vote="sabotage">Sabotage</button>
+        <div id="mission-voting">
+            <span id="mission-text"><b>You're on the mission! Do you cooperate, or sabotage it?</b></span><br/>
+            <button class="mission-vote" data-vote="cooperate">Cooperate</button>
+            <button class="mission-vote" data-vote="sabotage">Sabotage</button>
         </div>
         <button id="newgame">Start a new game!</button>
         <h2 id="newgamelink"><a>New game created! Click to join!</a></h2>
