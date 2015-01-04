@@ -7,7 +7,7 @@ __Dependencies__
 * [mongodb](http://www.mongodb.org/)
 * [node.js](http://nodejs.org/), and then (from inside the code directory):
 
-		npm install express mongoskin socket.io underscore node-uuid
+		npm install express@3 mongoskin@0.6.3 socket.io@0.9.14 underscore node-uuid
 		sudo npm install -g coffee-script
 
 __Running__
