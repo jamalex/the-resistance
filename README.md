@@ -22,6 +22,6 @@ And then, from the code directory, run:
 	
 Then go to: http://127.0.0.1:2020/
 
-__Demo server__
+A game requires at least 5 players before it can be started.
 
-Try it live at: http://eslgenie.com:2020/
+
