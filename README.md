@@ -7,7 +7,7 @@ __Dependencies__
 * [mongodb](http://www.mongodb.org/)
 * [node.js](http://nodejs.org/), and then (from inside the code directory):
 
-		npm install express mongoskin socket.io underscore node-uuid
+		npm install express@3 mongoskin@0.6.3 socket.io@0.9.14 underscore node-uuid
 		sudo npm install -g coffee-script
 
 __Running__
@@ -22,6 +22,6 @@ And then, from the code directory, run:
 	
 Then go to: http://127.0.0.1:2020/
 
-__Demo server__
+A game requires at least 5 players before it can be started.
 
-Try it live at: http://eslgenie.com:2020/
+
